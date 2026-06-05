@@ -1,0 +1,163 @@
+<div class="admin-users-container">
+  
+  <div class="admin-header-row">
+    <div class="admin-header-text">
+      <h1>Gestión de Personal</h1>
+      <p>Administración de cuentas municipales y asignación de zonas de recojo</p>
+    </div>
+    <button (click)="openCreateModal()" class="btn-create-user">Registrar Nuevo Personal</button>
+  </div>
+
+  @if (isLoading && users.length === 0) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Cargando cuentas de usuario...</p>
+    </div>
+  } @else if (users.length === 0) {
+    <div class="empty-state">
+      <p>No hay usuarios registrados en el sistema.</p>
+    </div>
+  } @else {
+    <div class="table-card">
+      <div class="table-container">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Nombre Completo</th>
+              <th>Correo Electrónico</th>
+              <th>Rol Municipal</th>
+              <th>Zona Asignada</th>
+              <th>Fecha Registro</th>
+              <th class="actions-th">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users; track user.id) {
+              <tr class="user-row">
+                <td class="name-td">{{ user.first_name }} {{ user.last_name }}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                  <span class="badge-role" [class]="user.role">
+                    {{ user.role === 'admin_system' ? 'Sistemas' : user.role === 'admin_municipal' ? 'Municipal' : 'Operador' }}
+                  </span>
+                </td>
+                <td>{{ user.zone?.name || 'Sin zona' }}</td>
+                <td>{{ user.created_at | date:'dd/MM/yyyy' }}</td>
+                <td class="actions-td">
+                  <button (click)="openEditModal(user)" class="btn-action-edit" title="Editar cuenta">Editar</button>
+                  <button (click)="deleteUser(user)" class="btn-action-delete" title="Eliminar cuenta">Eliminar</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- MODAL FORMULARIO REGISTRO/EDICION -->
+@if (showFormModal) {
+  <div class="backdrop" (click)="closeModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ isEditMode ? 'Editar Cuenta Municipal' : 'Registrar Nuevo Personal' }}</h2>
+        <button class="btn-close-modal" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="onSubmit()">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group half">
+              <label for="first_name">Nombres (Obligatorio)</label>
+              <input 
+                type="text" 
+                id="first_name" 
+                [(ngModel)]="first_name" 
+                name="first_name" 
+                required 
+                placeholder="Juan" 
+                class="form-input">
+            </div>
+            
+            <div class="form-group half">
+              <label for="last_name">Apellidos (Obligatorio)</label>
+              <input 
+                type="text" 
+                id="last_name" 
+                [(ngModel)]="last_name" 
+                name="last_name" 
+                required 
+                placeholder="Perez" 
+                class="form-input">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Correo Electrónico (Obligatorio)</label>
+            <input 
+              type="email" 
+              id="email" 
+              [(ngModel)]="email" 
+              name="email" 
+              required 
+              placeholder="correo@vmt.gob.pe" 
+              class="form-input"
+              [disabled]="isEditMode">
+          </div>
+
+          <div class="form-group">
+            <label for="password">
+              Contraseña 
+              @if (isEditMode) {
+                <span class="optional-label">(Dejar en blanco para conservar la actual)</span>
+              }
+            </label>
+            <input 
+              type="password" 
+              id="password" 
+              [(ngModel)]="password" 
+              name="password" 
+              [required]="!isEditMode"
+              placeholder="••••••••" 
+              class="form-input">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group half">
+              <label for="role">Rol en el Sistema</label>
+              <select id="role" [(ngModel)]="role" name="role" class="form-select">
+                <option value="operator">Operador de Limpieza</option>
+                <option value="admin_municipal">Administrador Municipal</option>
+                <option value="admin_system">Administrador del Sistema</option>
+              </select>
+            </div>
+
+            @if (role === 'operator') {
+              <div class="form-group half">
+                <label for="zone">Zona / Sector Asignado</label>
+                <select id="zone" [(ngModel)]="zone_id" name="zone_id" class="form-select">
+                  <option [ngValue]="null">Sin asignar zona</option>
+                  @for (sector of sectors; track sector.id) {
+                    <option [ngValue]="sector.id">{{ sector.name }}</option>
+                  }
+                </select>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="closeModal()" class="btn-cancel">Cancelar</button>
+          <button type="submit" [disabled]="isSubmitting" class="btn-submit">
+            @if (isSubmitting) {
+              <span class="mini-spinner"></span> Guardando...
+            } @else {
+              Guardar Cuenta
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

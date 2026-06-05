@@ -1,0 +1,262 @@
+<div class="dashboard-container">
+  
+  <!-- CONTADORES DE ESTADO (TOP) -->
+  <div class="stats-row">
+    <div class="stat-card total">
+      <div class="stat-info">
+        <span class="stat-label">Total Alertas</span>
+        <span class="stat-value">{{ totalCount }}</span>
+      </div>
+    </div>
+    <div class="stat-card pending">
+      <div class="stat-info">
+        <span class="stat-label">Pendientes</span>
+        <span class="stat-value">{{ pendingCount }}</span>
+      </div>
+    </div>
+    <div class="stat-card in-process">
+      <div class="stat-info">
+        <span class="stat-label">En Proceso</span>
+        <span class="stat-value">{{ inProcessCount }}</span>
+      </div>
+    </div>
+    <div class="stat-card attended">
+      <div class="stat-info">
+        <span class="stat-label">Atendidas</span>
+        <span class="stat-value">{{ atendidoCount }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCION DE FILTROS -->
+  <div class="filters-card">
+    <div class="filters-title">Filtros de Búsqueda</div>
+    <div class="filters-row">
+      <div class="filter-group">
+        <label for="f-status">Estado</label>
+        <select id="f-status" [(ngModel)]="filterStatus" (change)="onFilterChange()" class="filter-select">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="en_proceso">En Proceso</option>
+          <option value="atendido">Atendido</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="f-sector">Sector</label>
+        <select id="f-sector" [(ngModel)]="filterSector" (change)="onFilterChange()" class="filter-select">
+          <option [ngValue]="null">Todos los sectores</option>
+          @for (sector of sectors; track sector.id) {
+            <option [ngValue]="sector.id">{{ sector.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="f-level">Criticidad</label>
+        <select id="f-level" [(ngModel)]="filterLevel" (change)="onFilterChange()" class="filter-select">
+          <option value="">Todas las criticidades</option>
+          <option value="leve">Leve</option>
+          <option value="moderado">Moderado</option>
+          <option value="critico">Crítico</option>
+        </select>
+      </div>
+
+      <button type="button" class="btn-reset-filters" (click)="resetFilters()">Limpiar Filtros</button>
+      <button type="button" class="btn-refresh-data" (click)="refreshData()">Actualizar Lista</button>
+    </div>
+  </div>
+
+  <!-- AREA PRINCIPAL SPLIT -->
+  <div class="main-split">
+    
+    <!-- LISTADO DE REPORTES (IZQUIERDA) -->
+    <div class="list-column">
+      <div class="column-header-inner">
+        <h3>Alertas Registradas ({{ filteredReports.length }})</h3>
+      </div>
+      
+      @if (isLoading) {
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Cargando reportes...</p>
+        </div>
+      } @else if (filteredReports.length === 0) {
+        <div class="empty-state">
+          <p>No se encontraron reportes con los filtros seleccionados.</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Sector</th>
+                <th>Residuos</th>
+                <th>Criticidad</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (report of filteredReports; track report.id) {
+                <tr (click)="selectReport(report)" [class.active]="selectedReport?.id === report.id" class="report-row">
+                  <td>#{{ report.id }}</td>
+                  <td>{{ report.sector_name || 'Sin sector' }}</td>
+                  <td class="capitalize">{{ report.waste_type }}</td>
+                  <td>
+                    <span class="badge-level" [class]="report.accumulation_level">
+                      {{ report.accumulation_level }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge-status" [class]="report.status">
+                      {{ report.status === 'pendiente' ? 'Pendiente' : report.status === 'en_proceso' ? 'En Proceso' : 'Atendido' }}
+                    </span>
+                  </td>
+                  <td>{{ report.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <!-- MAPA GEOESPACIAL DE MONITOREO (DERECHA) -->
+    <div class="map-column">
+      <div id="map" style="width: 100%; height: 100%; z-index: 1;"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SIDEBAR MODAL DETALLES DEL REPORTE -->
+@if (selectedReport) {
+  <div class="backdrop" (click)="closeDetail()">
+    <div class="detail-sidebar" (click)="$event.stopPropagation()">
+      <div class="sidebar-header">
+        <h3>Detalle de Alerta #{{ selectedReport.id }}</h3>
+        <button class="btn-close-sidebar" (click)="closeDetail()">×</button>
+      </div>
+
+      <div class="sidebar-body">
+        
+        <!-- FOTO -->
+        <div class="detail-image-wrapper">
+          <img [src]="selectedReport.image_url" alt="Foto del reporte" class="detail-image">
+          <div class="ml-confidence-badge">
+            ML Confianza: {{ (selectedReport.ml_confidence * 100) | number:'1.0-0' }}%
+          </div>
+        </div>
+
+        <!-- INFORMACION GENERAL -->
+        <div class="detail-section">
+          <h4>Detalles de Alerta</h4>
+          <div class="detail-grid">
+            <div class="grid-item">
+              <span class="label">Sector:</span>
+              <span class="value">{{ selectedReport.sector_name || 'Sin sector' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="label">Fecha:</span>
+              <span class="value">{{ selectedReport.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="label">Coordenadas:</span>
+              <span class="value monospace">{{ selectedReport.latitude | number:'1.5-5' }}, {{ selectedReport.longitude | number:'1.5-5' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="label">Tipo Basura:</span>
+              <span class="value capitalize">{{ selectedReport.waste_type }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="label">Criticidad:</span>
+              <span class="value capitalize" [class]="selectedReport.accumulation_level">
+                {{ selectedReport.accumulation_level }}
+              </span>
+            </div>
+            <div class="grid-item">
+              <span class="label">Notificación:</span>
+              <span class="value">{{ selectedReport.citizen_email || 'Sin correo asignado' }}</span>
+            </div>
+          </div>
+          
+          @if (selectedReport.description) {
+            <div class="description-block">
+              <span class="label">Descripción Ciudadana:</span>
+              <p>{{ selectedReport.description }}</p>
+            </div>
+          }
+        </div>
+
+        <!-- FORMULARIO DE ASIGNACION Y ESTADO -->
+        <div class="detail-section form-update">
+          <h4>Acciones Administrativas</h4>
+          
+          <form (ngSubmit)="updateReport()">
+            <div class="form-group">
+              <label for="edit-status">Actualizar Estado</label>
+              <select id="edit-status" [(ngModel)]="editStatus" name="editStatus" class="form-select">
+                <option value="pendiente">Pendiente</option>
+                <option value="en_proceso">En Proceso</option>
+                <option value="atendido">Atendido (Cerrar Alerta)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="edit-operator">Asignar Operador</label>
+              <select id="edit-operator" [(ngModel)]="editOperatorId" name="editOperatorId" class="form-select">
+                <option [ngValue]="null">Sin asignar operador</option>
+                @for (operator of operators; track operator.id) {
+                  <option [ngValue]="operator.id">{{ operator.first_name }} {{ operator.last_name }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="edit-comment">Comentarios / Bitácora</label>
+              <textarea 
+                id="edit-comment" 
+                [(ngModel)]="editComment" 
+                name="editComment" 
+                rows="2" 
+                placeholder="Escribe el avance, acciones de recojo realizadas o detalles de asignación..." 
+                class="form-textarea">
+              </textarea>
+            </div>
+
+            <button type="submit" [disabled]="isUpdatingStatus" class="btn-update-submit">
+              @if (isUpdatingStatus) {
+                <span class="mini-spinner"></span> Guardando Cambios...
+              } @else {
+                Guardar Modificaciones
+              }
+            </button>
+          </form>
+        </div>
+
+        <!-- HISTORIAL DE LOGS / BITACORA -->
+        <div class="detail-section logs-history">
+          <h4>Historial de Gestión (Bitácora)</h4>
+          <div class="timeline">
+            @for (log of selectedReport.logs; track log.id) {
+              <div class="timeline-item">
+                <div class="timeline-badge" [class]="log.new_status"></div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="log-status capitalize">{{ log.new_status }}</span>
+                    <span class="log-date">{{ log.created_at | date:'dd/MM HH:mm' }}</span>
+                  </div>
+                  <p class="log-comment">{{ log.comment || 'Sin comentarios.' }}</p>
+                  <span class="log-user">Responsable: {{ log.user_name || 'Ciudadano' }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+}

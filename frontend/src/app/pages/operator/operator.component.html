@@ -1,0 +1,161 @@
+<div class="operator-container">
+  
+  <div class="operator-header">
+    <h1>Portal del Operador</h1>
+    <p>Bienvenido, {{ currentUser()?.first_name }} {{ currentUser()?.last_name }}</p>
+    <span class="operator-subtitle">Gestiona y actualiza los puntos de residuos asignados a tu zona de trabajo</span>
+  </div>
+
+  @if (isLoading && assignedReports.length === 0) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Cargando tareas asignadas...</p>
+    </div>
+  } @else if (assignedReports.length === 0) {
+    <div class="no-tasks-card">
+      <div class="check-icon" style="display: flex; align-items: center; justify-content: center;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width: 28px; height: 28px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+        </svg>
+      </div>
+      <h3>Sin Tareas Pendientes</h3>
+      <p>No tienes alertas de residuos asignadas para recojo en este momento. ¡Buen trabajo!</p>
+      <button (click)="loadAssignedTasks()" class="btn-refresh">Actualizar Lista</button>
+    </div>
+  } @else {
+    <div class="tasks-grid">
+      @for (report of assignedReports; track report.id) {
+        <div class="task-card" [class.in-process]="report.status === 'en_proceso'">
+          <div class="task-image" [style.backgroundImage]="'url(' + report.image_url + ')'">
+            <span class="badge-status" [class]="report.status">
+              {{ report.status === 'pendiente' ? 'Pendiente' : 'En Proceso' }}
+            </span>
+          </div>
+          <div class="task-body">
+            <div class="task-title-row">
+              <h3>Alerta #{{ report.id }}</h3>
+              <span class="badge-level" [class]="report.accumulation_level">{{ report.accumulation_level }}</span>
+            </div>
+            
+            <p class="task-date">Asignado el: {{ report.created_at | date:'dd/MM/yyyy HH:mm' }}</p>
+            
+            <div class="task-details">
+              <div class="detail-item">
+                <span class="label">Residuos:</span>
+                <span class="value capitalize">{{ report.waste_type }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Ubicación:</span>
+                <span class="value monospace">{{ report.latitude | number:'1.4-4' }}, {{ report.longitude | number:'1.4-4' }}</span>
+              </div>
+            </div>
+
+            @if (report.description) {
+              <p class="task-description-preview">{{ report.description }}</p>
+            }
+
+            <button (click)="selectReport(report)" class="btn-manage-task">Gestionar Tarea</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- MODAL DETALLE Y ACTUALIZACION DE TAREA -->
+@if (selectedReport) {
+  <div class="backdrop" (click)="closeDetail()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Gestionar Alerta #{{ selectedReport.id }}</h2>
+        <button class="btn-close-modal" (click)="closeDetail()">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="split-view">
+          
+          <!-- LADO IZQUIERDO: DETALLES -->
+          <div class="split-left">
+            <img [src]="selectedReport.image_url" alt="Foto del reporte" class="modal-image">
+            
+            <div class="detail-info-block">
+              <div class="info-row">
+                <span class="label">Sector:</span>
+                <span class="value">{{ selectedReport.sector_name || 'Sin sector' }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Criticidad:</span>
+                <span class="value capitalize" [class]="selectedReport.accumulation_level">
+                  {{ selectedReport.accumulation_level }}
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="label">Coordenadas:</span>
+                <span class="value monospace">{{ selectedReport.latitude }}, {{ selectedReport.longitude }}</span>
+              </div>
+            </div>
+
+            @if (selectedReport.description) {
+              <div class="description-block">
+                <span class="label">Comentario del Ciudadano:</span>
+                <p>{{ selectedReport.description }}</p>
+              </div>
+            }
+
+            <!-- BITACORA INTERNA -->
+            <div class="logs-block">
+              <h4>Bitácora del Reporte</h4>
+              <div class="timeline">
+                @for (log of selectedReport.logs; track log.id) {
+                  <div class="timeline-item">
+                    <span class="timeline-date">{{ log.created_at | date:'dd/MM HH:mm' }}</span>
+                    <div class="timeline-content">
+                      <span class="log-status" [class]="log.new_status">{{ log.new_status }}</span>
+                      <p>{{ log.comment || 'Sin descripción de la acción' }}</p>
+                      <span class="log-user">Por: {{ log.user_name || 'Ciudadano' }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- LADO DERECHO: FORMULARIO DE ACCION -->
+          <div class="split-right">
+            <h3>Registrar Acciones de Limpieza</h3>
+            <p class="form-desc">Ingresa el reporte de los trabajos realizados y selecciona la acción correspondiente.</p>
+            
+            <div class="form-group">
+              <label for="action-desc">Descripción de los trabajos en campo</label>
+              <textarea 
+                id="action-desc" 
+                [(ngModel)]="actionComment" 
+                rows="4" 
+                placeholder="Detalla qué tareas de limpieza, barrido o transporte de residuos realizaste en este punto..." 
+                class="form-textarea">
+              </textarea>
+            </div>
+
+            <div class="action-buttons-row">
+              <button 
+                type="button" 
+                [disabled]="isSubmittingAction" 
+                (click)="registerProgress()" 
+                class="btn-action progress">
+                Registrar Avance
+              </button>
+              <button 
+                type="button" 
+                [disabled]="isSubmittingAction" 
+                (click)="resolveReport()" 
+                class="btn-action resolve">
+                Limpieza Completada
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+}

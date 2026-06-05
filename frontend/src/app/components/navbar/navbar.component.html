@@ -1,0 +1,41 @@
+<nav class="navbar">
+  <div class="nav-container">
+    <div class="nav-left-spacer"></div>
+    <div class="nav-brand">
+      <a routerLink="/" (click)="closeMenu()">Monitoreo Residuos VMT</a>
+    </div>
+    
+    <button class="nav-toggle" (click)="toggleMenu()" aria-label="Abrir menú">
+      <span class="bar" [class.open]="isMenuOpen"></span>
+      <span class="bar" [class.open]="isMenuOpen"></span>
+      <span class="bar" [class.open]="isMenuOpen"></span>
+    </button>
+
+    <div class="nav-links" [class.active]="isMenuOpen">
+      <!-- Enlaces Públicos (Cualquier visitante) -->
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" (click)="closeMenu()" class="nav-item">Mapa de Reportes</a>
+      
+      <!-- Enlaces según el rol si está autenticado -->
+      @if (isLoggedIn()) {
+        @if (userRole() === 'admin_system' || userRole() === 'admin_municipal') {
+          <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()" class="nav-item">Dashboard Municipal</a>
+        }
+        
+        @if (userRole() === 'admin_system') {
+          <a routerLink="/admin/users" routerLinkActive="active" (click)="closeMenu()" class="nav-item">Gestión de Usuarios</a>
+        }
+        
+        @if (userRole() === 'operator') {
+          <a routerLink="/operator" routerLinkActive="active" (click)="closeMenu()" class="nav-item">Mis Tareas</a>
+        }
+
+        <div class="user-info-section">
+          <span class="user-name">{{ currentUser()?.first_name }} ({{ currentUser()?.role }})</span>
+          <button (click)="logout()" class="btn-logout">Cerrar Sesión</button>
+        </div>
+      } @else {
+        <a routerLink="/login" routerLinkActive="active" (click)="closeMenu()" class="btn-login">Ingreso Municipal</a>
+      }
+    </div>
+  </div>
+</nav>

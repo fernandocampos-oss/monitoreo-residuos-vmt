@@ -1,0 +1,73 @@
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>Monitoreo Residuos VMT</h1>
+      <p>Portal Municipal para Personal Autorizado</p>
+    </div>
+
+    @if (errorMessage) {
+      <div class="error-alert">
+        <span class="error-icon" style="display: flex; align-items: center;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+        </span>
+        <span class="error-text">{{ errorMessage }}</span>
+      </div>
+    }
+
+    <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+      <div class="form-group">
+        <label for="email" class="form-label">Correo Electrónico</label>
+        <input 
+          type="email" 
+          id="email" 
+          [(ngModel)]="email" 
+          name="email" 
+          required 
+          placeholder="nombre@vmt.gob.pe" 
+          class="form-input">
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Contraseña</label>
+        <input 
+          type="password" 
+          id="password" 
+          [(ngModel)]="password" 
+          name="password" 
+          required 
+          placeholder="••••••••" 
+          class="form-input">
+      </div>
+
+      <button type="submit" [disabled]="isSubmitting || !email || !password" class="btn-login-submit">
+        @if (isSubmitting) {
+          <span class="spinner-mini"></span> Cargando sesión...
+        } @else {
+          Iniciar Sesión
+        }
+      </button>
+    </form>
+
+    <div class="demo-helper-box">
+      <h4>Credenciales de Demostración</h4>
+      <div class="demo-credentials-list">
+        <div class="demo-credential-item">
+          <strong>Administrador Municipal:</strong><br>
+          Usuario: admin.municipal@vmt.gob.pe<br>
+          Contraseña: admin123
+        </div>
+        <div class="demo-credential-item">
+          <strong>Operador de Zona (Cercado):</strong><br>
+          Usuario: operador.cercado@vmt.gob.pe<br>
+          Contraseña: admin123
+        </div>
+      </div>
+    </div>
+
+    <div class="login-footer">
+      <p>Para crear cuentas u obtener accesos, comuníquese con el administrador del sistema.</p>
+    </div>
+  </div>
+</div>
